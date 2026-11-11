@@ -1,0 +1,31 @@
+# Use an explicit python image to avoid unexpected runtime shifts
+FROM python:3.11-slim
+
+# Set strict system boundaries inside the container
+WORKDIR /app
+
+# Install basic tool utilities required for file checking or compilation
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy dependency configuration parameters
+COPY requirements.txt .
+
+# Install dependencies directly into the system container space
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Copy the entire backend core system layer into the work directory
+COPY . .
+
+# CRITICAL STEP: Build out the workspace module footprint ahead of execution loops
+RUN mkdir -p sandbox/workspace && \
+    touch sandbox/workspace/__init__.py
+
+# Expose FastAPI's explicit port binding target
+EXPOSE 8000
+
+# Fire up uvicorn to host the SSE loop pipelines asynchronously
+CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
