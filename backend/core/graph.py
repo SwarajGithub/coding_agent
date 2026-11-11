@@ -118,14 +118,12 @@ def run_tests_node(state: AgentState) -> dict:
 # --- Routing Gates ---
 
 def test_gate(state: AgentState) -> str:
-    """Routes based on whether the test suite itself is syntactically correct."""
     if "TEST_SYNTAX_ERROR" in state["test_results"]:
         return "fix_test_suite"
     return "generate_code"
 
 
 def execution_gate(state: AgentState) -> str:
-    """Routes based on unit test outcomes."""
     if "PASSED" in state["test_results"]:
         return "evaluate_quality"
     if state["retry_count"] >= state["max_retries"]:
@@ -134,13 +132,11 @@ def execution_gate(state: AgentState) -> str:
 
 
 def evaluate_quality_node(state: AgentState) -> dict:
-    """Applies the LLM quality gate check on top of passing code."""
     review_report = evaluate_code_quality(
         requirement=state["requirement"],
         code_draft=state["code_draft"]
     )
 
-    # Append the judge results to the test logs or track via messages
     report_summary = (
         f"\n\n--- QUALITY GATE RESULT: {review_report.status} ---\n"
         f"Readability Score: {review_report.readability_score}/10\n"
@@ -153,7 +149,7 @@ def evaluate_quality_node(state: AgentState) -> dict:
 
 
 
-# --- Assemble the Dual-Healing Graph ---
+
 workflow = StateGraph(AgentState)
 
 workflow.add_node("verify_test_syntax", verify_test_syntax_node)
@@ -180,6 +176,4 @@ workflow.add_conditional_edges("run_tests", execution_gate, {
     "evaluate_quality": "evaluate_quality",
     "graceful_exit": END
 })
-workflow.add_edge("evaluate_quality", END)
-
 agent_graph = workflow.compile()
